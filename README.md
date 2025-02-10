@@ -1,7 +1,7 @@
-### **Repository Name:**  
-⚡ **VoltMaster 228 16/6.5 DVM**  
 
-### **Repository Description:**  
+### ⚡ **VoltMaster 228 16/6.5 DVM**  
+
+
 🔬 **VoltMaster 228 16/6.5 DVM** is a high-precision, **DIY digital voltmeter** inspired by professional-grade **DMMs**. Designed for makers, engineers, and electronics enthusiasts, this project leverages **off-the-shelf sensor modules** like **Adafruit INA228** to provide **16-bit resolution** and up to **6.5-digit precision** for **DC voltage measurements up to 30V**.  
 
 💡 **Key Features:**  
