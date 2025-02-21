@@ -1,119 +1,240 @@
+# INA228 Voltage Monitor with LCD and Buzzer
 
-# Flash Memory Reader with ESP32
-
-This ESP32 project demonstrates how to read the entire memory content of a flash chip in chunks using SPI communication. It includes functions to read the flash chip ID and to print memory contents in a readable format.
+This project reads bus voltage from an INA228 sensor, applies exponential smoothing and drift compensation, and displays the filtered and drift-corrected values on a 20x4 I2C LCD. A buzzer is triggered when the voltage exceeds a predefined threshold.
 
 ## Features
-- Reads and displays the flash chip ID.
-- Reads flash memory in configurable chunks.
-- Outputs data to the Serial Monitor.
+
+- **Voltage Measurement:** Uses the INA228 sensor.
+- **Exponential Smoothing:** Reduces noise in voltage readings.
+- **Drift Compensation:** Adjusts for slow baseline changes.
+- **Threshold Beep:** Activates a buzzer when voltage exceeds 5.0V.
+- **LCD Display:** Shows filtered voltage, drift-compensated voltage, and baseline voltage.
 
 ## Hardware Requirements
-- ESP32 Microcontroller
-- SPI Flash Chip (compatible with standard SPI protocol)
-- Jumper wires
 
-## Pinout for ESP32
-``` 
-| ESP32 Pin | Flash Chip Pin | Description                  |
-|-----------|----------------|------------------------------|
-| GPIO 5    | CS             | Chip Select                  |
-| GPIO 18   | SCLK           | Serial Clock                 |
-| GPIO 19   | MISO           | Master In Slave Out          |
-| GPIO 23   | MOSI           | Master Out Slave In          |
-| GND       | GND            | Ground                       |
-| 3.3V      | VCC            | Power Supply for Flash Chip  |
+- **Microcontroller:** ESP32 (or Arduino Uno as an alternative)
+- **Sensor:** INA228
+- **Shunt Resistor:** 0.002 Ω (for a maximum expected current of 204 A)
+- **Display:** 20x4 I2C LCD (Address 0x27)
+- **Buzzer:** Connected to pin 15 (ESP32)
+
+## Software Requirements
+
+- [PlatformIO](https://platformio.org/)
+- **Arduino Framework**
+- Libraries:
+  - [robtillaart/INA228](https://github.com/RobTillaart/INA228) (v0.1.5)
+  - [marcoschwartz/LiquidCrystal_I2C](https://github.com/marcoschwartz/LiquidCrystal_I2C) (v1.1.4)
+
+## Project Structure
+
+```
+.
+├── src
+│   └── main.cpp         # Main application code.
+├── platformio.ini       # PlatformIO project configuration.
+└── README.md            # This file.
 ```
 
-I used   MX25L4005APC-12G is an 8-pin SPI NOR flash memory chip. 
+## Code Overview
 
-Here's the pinout mapping for the MX25L4005APC-12G 8-pin DIP package and its corresponding connections to the ESP32 based on the provided project:
-https://www.alldatasheet.com/datasheet-pdf/pdf/267916/MCNIX/MX25L4005APC-12G.html 
+The main application performs the following:
 
-### MX25L4005APC-12G Pinout and ESP32 Connections 
-``` 
-| Pin on MX25L4005APC-12G | Name      | Description                    | ESP32 Connection  |
-|--------------------------|--------- |--------------------------------|-------------------|
-| 1                        | CS#      | Chip Select (Active Low)       | GPIO 5            |
-| 2                        | DO (MISO)| Data Out (Master In Slave Out) | GPIO 19           |
-| 3                        | WP#      | Write Protect (Active Low)     | Connect to 3.3V   |
-| 4                        | GND      | Ground                         | GND               |
-| 5                        | DI (MOSI)| Data In (Master Out Slave In)  | GPIO 23           |
-| 6                        | CLK      | Serial Clock                   | GPIO 18           |
-| 7                        | HOLD#    | Hold (Active Low)              | Connect to 3.3V   |
-| 8                        | VCC      | Power Supply (2.7–3.6V)        | 3.3V              |
-``` 
-### Notes:
-1. **CS# (Chip Select)**: Active low signal used to enable the chip for SPI communication. Connect this to `GPIO 5` on the ESP32, as specified in the code.
-2. **DO (MISO)**: Data sent from the flash chip to the ESP32 during read operations. Connect to `GPIO 19` on the ESP32.
-3. **DI (MOSI)**: Data sent from the ESP32 to the flash chip during write operations. Connect to `GPIO 23` on the ESP32.
-4. **CLK (Serial Clock)**: Synchronizes the communication between the ESP32 and the flash chip. Connect to `GPIO 18` on the ESP32.
-5. **WP# (Write Protect)**: This pin disables writing when active (low). Tie it to 3.3V if write protection is not needed.
-6. **HOLD#**: Temporarily pauses SPI communication when active (low). Tie it to 3.3V if not used.
-7. **VCC**: Provide 3.3V power to the chip.
-8. **GND**: Connect to the ground of the ESP32.
+1. **Initialization:**  
+   - Sets up the I2C communication for both the INA228 sensor and the LCD.
+   - Initializes the buzzer pin.
+   - Performs calibration for the INA228.
 
-### Schematic Example
+2. **Main Loop:**  
+   - Reads the bus voltage.
+   - Applies exponential smoothing to filter noise.
+   - Updates a slow-changing baseline for drift compensation.
+   - Computes a drift-corrected voltage value.
+   - Activates a buzzer if the voltage exceeds the trigger threshold (5.0V).
+   - Displays the filtered, corrected, and baseline voltage on the LCD.
+   - Outputs the readings to the Serial Monitor.
+
+## Example Code
+
+Below is the full source code from `src/main.cpp`:
+
+```cpp
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include "INA228.h"
+
+#define INA228_ADDRESS  0x40     
+#define LCD_ADDRESS     0x27   
+
+// Calibration values
+#define SHUNT_R 0.002    // Shunt resistor (Ohms)
+#define SHUNT_A 204.0    // Maximum expected current (Amps)
+
+// Error messages
+#define INA228_INIT_ERROR "INA228 not found. Check wiring!"
+#define CAL_ERROR  "Calibration error!"
+
+// Define the trigger voltage (in volts) for the beep event.
+#define TRIGGER_VOLTAGE 5.00000  
+
+// Define the buzzer pin (adjust according to your wiring)
+#define BUZZER_PIN 15
+
+// Create a 20x4 LCD object.
+LiquidCrystal_I2C lcd(LCD_ADDRESS, 20, 4);
+
+INA228 ina228(INA228_ADDRESS);
+
+// Exponential smoothing for the voltage reading.
+const float alpha = 0.1;   
+float filteredVoltage = 0.0;
+bool firstReading = true;
+
+// Drift compensation variables.
+const float gamma = 0.001;  // Small coefficient for slow baseline update.
+float baselineVoltage = 0.0;  // Long-term average (baseline).
+
+// Flag to ensure beep only once per threshold crossing.
+bool beeped = false;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);   
+  Wire.begin();
+  
+  // Initialize buzzer pin.
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Initiating...");
+
+  if (!ina228.begin()) {
+    lcd.clear();
+    Serial.println(INA228_INIT_ERROR);  
+    lcd.print(INA228_INIT_ERROR);
+    while (1);
+  }
+
+  int calibrationResult = ina228.setMaxCurrentShunt(SHUNT_A, SHUNT_R);
+  if (calibrationResult != 0) {
+    Serial.println(CAL_ERROR);
+    lcd.clear();
+    lcd.print(CAL_ERROR);
+  }
+}
+
+void loop() {
+  // Read the bus voltage (in volts) from the INA228.
+  float voltage = ina228.getBusVoltage();
+
+  // Exponential smoothing to get a weighted average.
+  if (firstReading) {
+    filteredVoltage = voltage;
+    baselineVoltage = voltage;  // Initialize baseline with first reading.
+    firstReading = false;
+  } else {
+    filteredVoltage = alpha * voltage + (1.0 - alpha) * filteredVoltage;
+    // Update baseline slowly to track drift.
+    baselineVoltage = gamma * filteredVoltage + (1.0 - gamma) * baselineVoltage;
+  }
+
+  // Compute drift-compensated voltage.
+  float correctedVoltage = filteredVoltage - baselineVoltage;
+
+  // Format the filtered and corrected voltage values to five decimal places.
+  char voltageStr[16];
+  char correctedStr[16];
+  sprintf(voltageStr, "%.5f V", filteredVoltage);
+  sprintf(correctedStr, "%.5f V", correctedVoltage);
+
+  // Check if the filtered voltage meets or exceeds the trigger threshold.
+  if (filteredVoltage >= TRIGGER_VOLTAGE) {
+    if (!beeped) {
+      // Beep once: using tone() for 200 ms at 1000 Hz.
+      tone(BUZZER_PIN, 1000, 200);
+      beeped = true;
+    }
+  } else {
+    // Reset the flag when voltage drops below the trigger threshold.
+    beeped = false;
+  }
+
+  // Print the values to the Serial Monitor.
+  Serial.print("Filtered: ");
+  Serial.print(voltageStr);
+  Serial.print("  Drift-Corrected: ");
+  Serial.println(correctedStr);
+
+  // Display the values on the LCD.
+  lcd.setCursor(0, 0);
+  lcd.print("Filt: ");
+  lcd.print(voltageStr);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Drift: ");
+  lcd.print(correctedStr);
+
+  lcd.setCursor(0, 2);
+  lcd.print("Base: ");
+  lcd.print(baselineVoltage, 5);
+
+  delay(1000);  // Update once every second.
+}
 ```
-ESP32        MX25L4005APC-12G
-------       --------------
-GPIO 5  -->  CS#
-GPIO 18 -->  CLK
-GPIO 19 -->  DO (MISO)
-GPIO 23 -->  DI (MOSI)
-3.3V    -->  VCC, WP#, HOLD#
-GND     -->  GND
+
+## PlatformIO Configuration
+
+Below is the `platformio.ini` file configuration supporting both ESP32 and Arduino Uno environments:
+
+```ini
+; PlatformIO Project Configuration File
+
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+monitor_speed = 115200
+monitor_filters = default, log2file
+lib_deps =  
+  robtillaart/INA228 @ 0.1.5
+  marcoschwartz/LiquidCrystal_I2C @ 1.1.4
+
+[env:uno]
+platform = atmelavr
+framework = arduino
+board = uno
 ```
-
-Ensure your flash chip operates at 3.3V to avoid damage, as the ESP32's GPIO pins are not 5V tolerant. Use level shifters if required for other configurations.
-
-## Installation
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/lahirunirmalx/spi-eeprom-tool.git
-   ```
-2. Open the ` src/main.cpp` file in the Arduino IDE or PlatformIO.
-3. Install the ESP32 board package:
-   - In the Arduino IDE, go to **File > Preferences** and add the following URL in the "Additional Board Manager URLs" field: `https://dl.espressif.com/dl/package_esp32_index.json`.
-   - Then, go to **Tools > Board > Boards Manager**, search for `ESP32`, and install the package.
-4. Set the correct COM port and board in the IDE:
-   - Select **Tools > Board > ESP32 Dev Module** (or your specific ESP32 board).
-   - Choose the correct port under **Tools > Port**.
-5. Upload the sketch to your ESP32.
 
 ## Usage
-1. Wire your ESP32 to the flash chip as per the pinout table.
-2. Power on the ESP32 and connect it to your computer.
-3. Open the Serial Monitor at a baud rate of 115200.
-4. View the flash chip ID and memory contents.
 
-## Configuration
-- **Chip Select Pin**: Ensure `CS_PIN` is correctly set in the code to match your wiring.
-- **Flash Size**: Update `FLASH_SIZE` in the code to match your flash chip's memory capacity.
-- **Chunk Size**: Modify `CHUNK_SIZE` for reading memory in smaller or larger chunks.
+1. **Clone the Repository:**
 
-## Example Output
-```
-Reading Flash Chip ID...
-Flash Chip ID:
-Manufacturer ID: 0xEF
-Memory Type: 0x40
-Capacity: 0x15
+   ```bash
+   git clone https://your-repository-url.git
+   cd your-repository-directory
+   ```
 
-Reading Flash Memory in Chunks...
-Address: 0x000000
-00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
-...
-Finished reading flash memory.
-```
+2. **Open the Project in PlatformIO:**  
+   Launch PlatformIO (e.g., through VSCode) and open the cloned project.
 
-## Notes
-- Ensure your flash chip operates at 3.3V to avoid damaging it or your ESP32.
-- Double-check your wiring, especially for `CS`, `SCLK`, `MISO`, and `MOSI` connections.
+3. **Select Your Environment:**  
+   - For ESP32, select `[env:esp32dev]`.
+   - For Arduino Uno, select `[env:uno]`.
+
+4. **Build and Upload:**  
+   Use PlatformIO's build and upload commands to compile the code and flash it to your device.
+
+5. **Monitor the Output:**  
+   Open the Serial Monitor (set at 115200 baud) to see the real-time voltage readings.
 
 ## License
-This project is open source and available under the MIT License.
 
-## Contributions
-Contributions are welcome! Please open an issue or submit a pull request for improvements or bug fixes.
- 
+This project is provided under the [MIT License](LICENSE).
+
+---
+
+
