@@ -1,0 +1,53 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../esp32la"
+		},
+		{
+			"name": "testardino",
+			"path": "../../testardino"
+		},
+		{
+			"name": "240624-144809-espidf-blink",
+			"path": "../../240624-144809-espidf-blink"
+		},
+		{
+			"name": "240624-182139-esp32dev",
+			"path": "../../240624-182139-esp32dev"
+		},
+		{
+			"name": "240630-162005-arduino-blink",
+			"path": "../../240630-162005-arduino-blink"
+		},
+		{
+			"path": "../../arduino-echo"
+		},
+		{
+			"path": "../../esp32dev-echo"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../esp-now"
+		},
+		{
+			"path": "../../esp-debonce-int"
+		},
+		{
+			"path": "../../esp-trafic-lights"
+		},
+		{
+			"path": "../../esp-debonce-3btn"
+		},
+		{
+			"path": "../../dev-tt"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.ipp": "cpp",
+			"cstdint": "cpp"
+		}
+	}
+}
