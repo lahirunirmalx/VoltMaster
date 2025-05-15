@@ -138,9 +138,28 @@ This approach **reduces circuit complexity** while maintaining **good performanc
 
 By using **widely available sensor modules**, this project ensures **easy replication** and **scalability for future improvements**. Whether used as a simple voltmeter or integrated into larger measurement systems, this DIY DVM provides a **low-cost yet functional alternative to commercial benchtop meters**.
 
-### ⚡ **BUILD LOG**  
+# ⚡ **BUILD LOG**  
 
-# **Part List**
+### **Part List**
+
+- [ADS1256  24bit ADC Data acquisition card ](https://www.aliexpress.com/item/1005007924015949.html)
+- [ESP 32 WROOM](https://www.aliexpress.com/item/1005005704190069.html?) (i had micro usb one so I got [this also](https://www.aliexpress.com/item/4001084210384.html))
+- [OPA2333](https://www.aliexpress.com/item/1005006533819763.html) / [adapter board](https://www.aliexpress.com/item/1005007797484067.html)
+- [20x4 LCD](https://www.aliexpress.com/item/1005007132655492.html)
+- [10 Digit 16 Segment LCD](https://www.aliexpress.com/item/1005003062619251.html)
+- [3*4 keypad](https://www.aliexpress.com/item/4000873237364.html) / may be 4*4 is better with more keys with [I/O For I2C Port Interface](https://www.aliexpress.com/item/32353277284.html?)
+- [Rotary Encoder](https://www.aliexpress.com/item/1005005714786511.html)
+- [Insulated Safety 4mm Banana Female Jack](https://www.aliexpress.com/item/32979364296.html?) / not the best . need to have better ones
+- [8 Channel Solid State Relay Module](https://www.aliexpress.com/item/10000247027760.html) got for auto attenuation accidently bought low ones may be need to fix in software and less safe
+
+
+-[AC line filter ](https://www.aliexpress.com/item/4001315809458.html) to avoid noice in transformer 
+-[Case](https://www.aliexpress.com/item/1005006528488875.html?) [ may be I need 19 2U Rack ](https://www.aliexpress.com/item/1005008870576062.htm)
+-[SD card](https://www.aliexpress.com/item/1005005839004388.html) for data logging
+-[Logic Level Converter](https://www.aliexpress.com/item/32310628741.html) (for external triggers)
+
+
+
 
 ## **Update - 1**
 
