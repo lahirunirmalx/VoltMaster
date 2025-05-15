@@ -159,6 +159,10 @@ By using **widely available sensor modules**, this project ensures **easy replic
 -[Logic Level Converter](https://www.aliexpress.com/item/32310628741.html) (for external triggers)
 
 
+### **Block Diagram**
+
+![block_diagrams](block_diagrams/VoltMaster.jpeg)
+
 
 
 ## **Update - 1**
