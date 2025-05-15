@@ -138,8 +138,14 @@ This approach **reduces circuit complexity** while maintaining **good performanc
 
 By using **widely available sensor modules**, this project ensures **easy replication** and **scalability for future improvements**. Whether used as a simple voltmeter or integrated into larger measurement systems, this DIY DVM provides a **low-cost yet functional alternative to commercial benchtop meters**.
 
-## **Update**
+## **Update - 1**
 
 Due to unexpected performance issues with the 16-bit High-Resolution ADC powered by the INA228, the project will now utilize the ADS1256 24-bit DAM for analog-to-digital conversion. This change aims to deliver enhanced measurement resolution and reliability. In addition, a new divider network configuration has been implemented using both 1:10 and 1:1 resistor networks, paired with OPA2333 low-noise op-amps for superior signal conditioning. These updates are expected to improve the overall accuracy and stability of the voltmeter measurements.
 
+## **Update - 2**
+Basic voltage measurement has been successfully implemented, and a new attenuation front-end has been added.
+
+The design has been updated to include two displays: a single-row, 10-digit hexadecimal display for voltage readings, and a 20-digit pixel-based display for menu interactions and mathematical functions.
+
+A new 4x3 keypad and rotary encoder have also been added for improved menu navigation.
 
