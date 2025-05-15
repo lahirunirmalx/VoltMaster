@@ -138,7 +138,7 @@ This approach **reduces circuit complexity** while maintaining **good performanc
 
 By using **widely available sensor modules**, this project ensures **easy replication** and **scalability for future improvements**. Whether used as a simple voltmeter or integrated into larger measurement systems, this DIY DVM provides a **low-cost yet functional alternative to commercial benchtop meters**.
 
-# ⚡ **BUILD LOG**  
+# 🛠 **BUILD LOG**  
 
 ### **Part List**
 
