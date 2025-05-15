@@ -167,7 +167,7 @@ Due to unexpected performance issues with the 16-bit High-Resolution ADC powered
 
 ## **Update - 2**
 Basic voltage measurement has been successfully implemented, and a new attenuation front-end has been added.
-
+also divider netwok has been change to 1:22 to have some hedspace for the ADC 2.5v internal ref 
 The design has been updated to include two displays: a single-row, 10-digit hexadecimal display for voltage readings, and a 20-digit pixel-based display for menu interactions and mathematical functions.
 
 A new 4x3 keypad and rotary encoder have also been added for improved menu navigation.
