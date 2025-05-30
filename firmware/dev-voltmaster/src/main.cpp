@@ -8,15 +8,46 @@
 #include <LiquidCrystal_I2C.h> 
 #include <RotaryEncoder.h>
 #include <OneButton.h>
+#include <DM8BA10.h>
+#include <charset/latin_basic.h> 
+#include <string.h> 
+#include <Keypad_MC17.h>
+#include <Wire.h>
+#include <Keypad.h> 
+
+const byte ROWS = 4; //four rows
+const byte COLS = 3; //three columns
+char keys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+byte rowPins[ROWS] = {0, 1, 2, 3}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {4, 5, 6}; //connect to the column pinouts of the keypad
+
+Keypad_MC17 keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS, 0x24 );
+
+typedef struct {
+    char paddedStr[11]; // 10 chars + null terminator
+    int decimalIndex;
+} FloatConversionResult;
 
 #define PIN_IN1 12
 #define PIN_IN2 13
 #define PIN_INPUT 14
 
+
+#define WR 26 //WR
+#define DATA 27 //DATA
+#define CS 25 //CS
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+DM8BA10* vdisplay;
 RotaryEncoder *encoder = nullptr;
 OneButton button(PIN_INPUT, true); 
-ADS1256 adc(16, 17, 0, 5, 2.500);  
+ADS1256 adc(16, 17, 0, 5, 2.500);   
+
 
 long rawConversion = 0; //24-bit raw value
 float voltageValue = 0; //human-readable floating point value
@@ -40,7 +71,8 @@ int resilution =8;
  
 float max_val =-1e308;     
 
-float attenuation = (231)/10.1;
+//float attenuation = (231)/10.1;
+float attenuation = 1;
 
 
 int drateValues[16] =
@@ -84,6 +116,41 @@ int registerToRead = 0; //Register number to be read
 int registerToWrite = 0; //Register number to be written
 int registerValueToWrite = 0; //Value to be written in the selected register
 
+FloatConversionResult convertFloat(float value) {
+    char temp[32];
+    FloatConversionResult result;
+
+    // Convert float to string with enough decimal places
+    snprintf(temp, sizeof(temp), "%.8f", value);
+
+    // Find position of decimal point
+    char *dot = strchr(temp, '.');
+    int index = dot ? (int)(dot - temp) : -1;
+
+    // Remove the decimal point
+    char noDot[32] = {0};
+    int j = 0;
+    for (int i = 0; temp[i]; i++) {
+        if (temp[i] != '.') {
+            noDot[j++] = temp[i];
+        }
+    }
+    noDot[j] = '\0';
+
+    // Left pad to 9 characters
+    int len = strlen(noDot);
+    int pad = 9 - len;
+    if (pad < 0) pad = 0;
+
+    memset(result.paddedStr, '0', pad);
+    strcpy(result.paddedStr + pad, noDot);
+    result.paddedStr[9] = 'V';
+    result.paddedStr[10] = '\0'; // Ensure null-termination
+
+    result.decimalIndex = index + pad;
+
+    return result;
+}
 
 IRAM_ATTR void checkPosition()
 {
@@ -98,7 +165,39 @@ void singleClick() {
   Serial.println("singleClick() detected.");
 }  
 
-
+void keypadEvent(KeypadEvent key){
+  switch (keypad.getState()){
+    case PRESSED:
+      switch (key){
+        case '#': {
+          Serial.println("#");
+           break;
+        }
+        
+        case '*':  {
+          Serial.println("*");
+           break;
+        }
+      }
+    break;
+    case RELEASED:
+      switch (key){
+        case '*':{
+          Serial.println("*");
+           break;
+        } 
+      }
+    break;
+    case HOLD:
+      switch (key){
+        case '*': {
+          Serial.println("*");
+           break;
+        }
+      }
+    break;
+  }
+}
 // this function will be called when the button was pressed 2 times in a short timeframe.
 void doubleClick() {
   Serial.println("doubleClick() detected."); 
@@ -164,7 +263,7 @@ void setup()
   adc.setDRATE(DRATE_10SPS); //0b00010011 - DEC: 19
   //--------------------------------------------
 
-  adc.setBuffer(1);
+ // adc.setBuffer(1);
   
 
   //Freeze the display for 3 sec
@@ -174,6 +273,11 @@ void setup()
   lcd.backlight();
   lcd.clear();
   //------------------------------------------------------
+ 
+  vdisplay = new DM8BA10(new LatinBasicCharset(), CS, WR, DATA);
+  vdisplay->backlight();
+  vdisplay->println("Initiating");
+
   lcd.setCursor(0,1); //Defining positon to write from first row, first column .
   lcd.print("Initiating ..");  
   delay(1000);  
@@ -248,6 +352,8 @@ void setup()
   button.setPressMs(1000); // that is the time when LongPressStart is called
   button.attachLongPressStart(pressStart);
   button.attachLongPressStop(pressStop);
+
+  keypad.addEventListener(keypadEvent); 
   
 }
 
@@ -292,8 +398,15 @@ void loop()
           unsigned long now = millis();
           if (now - lastUpdate >= UPDATE_INTERVAL) {
             lastUpdate = now;
+             Serial.print("Sample count : ");
             Serial.println(sampleCount);
              
+
+             Serial.print("RAW ADC : ");
+            Serial.println(channels[0]);
+
+            Serial.print("Value : ");
+            Serial.println(channels[0]*attenuation);
          
           lcd.setCursor(0,1);
           lcd.print("Ch 1"); 
@@ -304,6 +417,9 @@ void loop()
           lcd.print("Ch 2"); 
           lcd.print(" : ");
           lcd.print(channels[0]*attenuation, resilution);
+          FloatConversionResult r = convertFloat(channels[0]*attenuation);
+          vdisplay->println(r.paddedStr);
+          vdisplay->setPoint(r.decimalIndex-1);
           lcd.print(" Vdc");
           sumSamples  = 0.0;
           sampleCount = 0;
