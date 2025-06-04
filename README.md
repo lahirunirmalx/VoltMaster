@@ -176,3 +176,46 @@ The design has been updated to include two displays: a single-row, 10-digit hexa
 
 A new 4x3 keypad and rotary encoder have also been added for improved menu navigation.
 
+## **Update - 3**  OPA2333 Sourcing and Reliability Notes ##
+
+I'm looking to buy the **OPA2333** from a reputable source. The ones I got from **AliExpress** seemed okay at first, but some issues started to appear.
+
+**Three of them failed** shortly after being exposed to signal conditions that were not ideal.
+
+Now I'm considering buying from **Mouser** or **Digi-Key**, although they are more expensive. I'm also looking for cheaper alternatives in the meantime.
+
+I'll keep updating as I test new parts. If the problem persists, we may need to make further improvements to the front-end circuitry to handle these issues more robustly.
+
+Since I have to use the software for gain error compensation, I might also use gain error calculations to correct for op-amp inaccuracies.
+
+---
+
+### ✅ Suggestions & Solutions
+
+#### 1. Component Sourcing
+- Stick to authorized distributors like:
+  - [Mouser](https://www.mouser.com)
+  - [Digi-Key](https://www.digikey.com)
+  - [Arrow](https://www.arrow.com)
+  - [RS Components](https://www.rs-online.com)
+- For budget options, consider:
+  - [LCSC](https://www.lcsc.com) (budget-friendly with traceability)
+
+#### 2. Possible Replacements for OPA2333
+If you're open to alternatives, consider:
+- `TLV2333` — Similar specs with possible differences in noise or offset.
+- `MCP6022` — Lower cost, but verify it meets your performance needs.
+- `MAX4239` — Precision op-amp with low offset.
+
+#### 3. Front-End Circuit Protection
+- Add **input protection diodes**, **resistors**, or **clamping circuits**.
+- Consider adding **low-pass filters** to handle noisy or transient signals.
+
+#### 4. Firmware-Based Compensation
+- Use **software calibration** to correct gain and offset errors.
+- Store calibration constants in **non-volatile memory**.
+- Apply corrections at startup for consistency across devices.
+
+---
+ 
+
